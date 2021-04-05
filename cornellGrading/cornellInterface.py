@@ -1,4 +1,7 @@
 import csv
+import wolframalpha
+import keyring
+import getpass
 
 from sys import platform
 
@@ -103,3 +106,22 @@ def getAssignment(c, courseNum=None, assignmentNum=None):
     print(f"Processing assignment: {asgn}")
 
     return asgn
+
+def latexQuiz(questions):
+    token = keyring.get_password("canvas_wolframalpha_token1", "wolframalpha")
+    if token is None:
+        token = getpass.getpass("Enter wolfram AppID:\n")
+        try:
+            client = wolframalpha.Client(token)
+            keyring.set_password("canvas_wolframalpha_token1", "wolframalpha", token)
+            print("Connected.  Token Saved")
+        except InvalidAccessToken:
+            print("Could not connect. Token not saved.")
+    else:
+        client = wolframalpha.Client(token)
+    
+    answers = []
+    for question in questions:
+        res = client.query(question)
+        answers.append(next(res.results).text)
+    return answers
