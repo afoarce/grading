@@ -5,6 +5,16 @@ import getpass
 
 from sys import platform
 
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support.ui import Select
+from selenium.webdriver.common.by import By
+from selenium.webdriver.chrome.options import Options
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+import os
+import time
+
 if platform.startswith('linux') or platform == "darwin":
     from bullet import Bullet
 elif platform == "win32":
@@ -125,3 +135,39 @@ def latexQuiz(questions):
         res = client.query(question)
         answers.append(next(res.results).text)
     return answers
+
+def updateKalturaPermissions(contributorList=[], mediaLink=[]):
+    #chrome_options = Options()
+    #chrome_options.add_argument("--headless")
+    driver = webdriver.Safari()
+
+    driver.get("https://canvas.cornell.edu/login/saml")
+    # link = driver.find_element_by_link_text("Cornell NetID")
+    # link.click()
+
+    usr_elem = driver.find_element_by_id("netid")
+    usr_elem.send_keys(os.environ["NETID"])
+    time.sleep(1)
+    pss_elem = driver.find_element_by_id("password")
+    pss_elem.send_keys(os.environ["PASS"])
+    pss_elem.submit()
+
+    time.sleep(7)
+
+    # push = driver.find_element_by_class_name("auth-button positive")
+    # push.click()
+    driver.find_element_by_css_selector("button.auth-button.positive").click()
+
+    time.sleep(10)
+
+    driver.get("https://canvas.cornell.edu/courses/28673/external_tools/184")
+
+    time.sleep(5)
+
+    link = driver.find_element_by_id("advanced menu button")
+    link.click()
+
+    link = driver.find_element_by_id("icon-pencil")
+    link.click()
+
+    #driver.close()
