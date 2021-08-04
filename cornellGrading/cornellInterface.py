@@ -12,8 +12,11 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.webdriver.common.action_chains import ActionChains
 import os
 import time
+
+from cornellGrading import cornellGrading
 
 if platform.startswith('linux') or platform == "darwin":
     from bullet import Bullet
@@ -136,38 +139,94 @@ def latexQuiz(questions):
         answers.append(next(res.results).text)
     return answers
 
-def updateKalturaPermissions(contributorList=[], mediaLink=[]):
+def updateKalturaPermissions(contributorList=[], mediaNames=[]):
     #chrome_options = Options()
     #chrome_options.add_argument("--headless")
+
+    c = cornellGrading()
+    course_number = chooseCourse(c)
+
     driver = webdriver.Safari()
-
     driver.get("https://canvas.cornell.edu/login/saml")
-    # link = driver.find_element_by_link_text("Cornell NetID")
-    # link.click()
 
-    usr_elem = driver.find_element_by_id("netid")
+    usr_elem = driver.find_element_by_id("username")
     usr_elem.send_keys(os.environ["NETID"])
     time.sleep(1)
     pss_elem = driver.find_element_by_id("password")
     pss_elem.send_keys(os.environ["PASS"])
-    pss_elem.submit()
+    driver.find_element_by_name("_eventId_proceed").click()
+    #pss_elem.submit()
 
+    print("logged in!")
     time.sleep(7)
+    # TODO wait for page to finish loading instead of time.sleep()
 
     # push = driver.find_element_by_class_name("auth-button positive")
     # push.click()
+    
+    driver.switch_to_frame("duo_iframe")
     driver.find_element_by_css_selector("button.auth-button.positive").click()
 
     time.sleep(10)
 
-    driver.get("https://canvas.cornell.edu/courses/28673/external_tools/184")
+    media_page = f"https://canvas.cornell.edu/courses/{course_number}/external_tools/184"
+    driver.get(media_page)
 
-    time.sleep(5)
+    time.sleep(4)
 
-    link = driver.find_element_by_id("advanced menu button")
-    link.click()
+    frame = driver.find_element_by_name("tool_content")
+    driver.switch_to.frame(frame)
+    
+    media_elements = driver.find_elements_by_class_name("item_link")
+    num_elements   = len(media_elements) // 2
+    
+    for i in range(num_elements):
+        element = media_elements[i]
+        link = element.get_attribute("href")
+        driver.get(link)
+        time.sleep(4)
 
-    link = driver.find_element_by_id("icon-pencil")
-    link.click()
+        edit_element = driver.find_element_by_id("tab-Edit")
+        edit_link = edit_element.get_attribute("href")
+        driver.get(edit_link)
+        time.sleep(4)
 
+        collab_tab_link = driver.find_element_by_id("collaboration-tab")
+        collab_tab_link.click()
+        time.sleep(1)
+        
+        verify_text = "add-collaborator"
+        candidate_links = driver.find_elements_by_tag_name("a")
+        add_collaborator_link = ""
+        for a in candidate_links:
+            current_link = a.get_attribute("href")
+            if current_link != None and verify_text in current_link:
+                add_collaborator_link   = current_link
+                add_collaborator_button = a
+                break
+        
+        link = driver.find_element_by_link_text('Add Collaborator')
+        link.click()
+        time.sleep(4)
+
+        permission_buttons = driver.find_elements_by_name("EditEntryCollaborator[permissions][]")
+        for button in permission_buttons:
+            button.click()
+
+        user_input_field = driver.find_elements_by_class_name("css-1hwfws3")[0]
+        user_input_field.click()
+        
+        
+        for collaborator in contributorList:
+            ActionChains(driver).send_keys(collaborator).perform()
+            time.sleep(1)
+            ActionChains(driver).send_keys(Keys.ENTER).perform()
+            time.sleep(1)
+        ActionChains(driver).send_keys(Keys.ENTER).perform()
+        
+        
+        # go back to where we started...
+        # driver.get(media_page)
+
+    
     #driver.close()
