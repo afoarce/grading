@@ -226,7 +226,7 @@ def updateKalturaPermissions(contributorList=[], mediaNames=[]):
         
         
         # go back to where we started...
-        # driver.get(media_page)
+        driver.get(media_page)
 
     
     #driver.close()
